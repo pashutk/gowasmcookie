@@ -8,7 +8,7 @@ import (
 	"syscall/js"
 )
 
-func parseArgs(args []js.Value) (string, js.Value, error) {
+func parseGetArgs(args []js.Value) (string, js.Value, error) {
 	if len(args) < 2 {
 		return "", js.Null(), errors.New("Too few parameters")
 	}
@@ -58,7 +58,7 @@ func getCookie(key string) (string, bool, error) {
 }
 
 func jsGetCookie(args []js.Value) {
-	key, cb, err := parseArgs(args)
+	key, cb, err := parseGetArgs(args)
 	if err != nil {
 		fmt.Println(err)
 		return
