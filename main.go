@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"syscall/js"
 )
@@ -35,12 +36,21 @@ func getCookie(key string) (string, bool, error) {
 	}
 
 	cookieString := cookieProperty.String()
-	cookies := strings.Split(cookieString, ";")
+	cookies := strings.Split(cookieString, "; ")
 	for _, cookie := range cookies {
 		parts := strings.Split(cookie, "=")
 
+		if len(parts) < 2 {
+			return "", false, nil
+		}
+
+		unescaped, err := url.PathUnescape(parts[1])
+		if err != nil {
+			return unescaped, false, err
+		}
+
 		if parts[0] == key {
-			return parts[1], true, nil
+			return unescaped, true, nil
 		}
 	}
 
