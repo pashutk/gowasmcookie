@@ -6,9 +6,10 @@ import (
 	"net/url"
 	"strings"
 	"syscall/js"
+	"time"
 )
 
-func parseGetArgs(args []js.Value) (string, js.Value, error) {
+func parseGetRemoveArgs(args []js.Value) (string, js.Value, error) {
 	if len(args) < 2 {
 		return "", js.Null(), errors.New("Too few parameters")
 	}
@@ -25,7 +26,7 @@ func parseGetArgs(args []js.Value) (string, js.Value, error) {
 }
 
 type cookieOptions struct {
-	expires string
+	expires time.Time
 	path    string
 	domain  string
 	secure  bool
@@ -50,7 +51,8 @@ func parseCookieOptions(optionsArg js.Value) (cookieOptions, error) {
 				return options, errors.New("expires option should be instance of Date")
 			}
 
-			options.expires = expiresValue.Call("toUTCString").String()
+			timestamp := expiresValue.Call("getTime").Float()
+			options.expires = time.Unix(int64(timestamp), 0)
 		}
 
 		if pathValue.Type() != js.TypeUndefined {
@@ -181,8 +183,8 @@ func setCookie(key, value string, options cookieOptions) (string, error) {
 
 	cookie := key + "=" + escapedValue
 
-	if options.expires != "" {
-		cookie += buildCookieOption("expires", options.expires)
+	if options.expires != (time.Time{}) {
+		cookie += buildCookieOption("expires", options.expires.Format(time.RFC1123))
 	}
 
 	if options.path != "" {
@@ -202,8 +204,17 @@ func setCookie(key, value string, options cookieOptions) (string, error) {
 	return cookie, nil
 }
 
+func removeCookie(key string) error {
+	_, err := setCookie(key, "", cookieOptions{expires: time.Unix(0, 0)})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func jsGetCookie(args []js.Value) {
-	key, cb, err := parseGetArgs(args)
+	key, cb, err := parseGetRemoveArgs(args)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -237,10 +248,27 @@ func jsSetCookie(args []js.Value) {
 	cb.Invoke(cookie)
 }
 
+func jsRemoveCookie(args []js.Value) {
+	key, cb, err := parseGetRemoveArgs(args)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = removeCookie(key)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	cb.Invoke(true)
+}
+
 func main() {
 	libcookie := js.NewCallback(func(args []js.Value) {}).New()
 	libcookie.Set("get", js.NewCallback(jsGetCookie))
 	libcookie.Set("set", js.NewCallback(jsSetCookie))
+	libcookie.Set("remove", js.NewCallback(jsRemoveCookie))
 
 	js.Global().Set("libcookie", libcookie)
 
