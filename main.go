@@ -35,46 +35,48 @@ type cookieOptions struct {
 func parseCookieOptions(optionsArg js.Value) (cookieOptions, error) {
 	options := cookieOptions{}
 
-	if optionsArg.Type() != js.TypeUndefined {
-		if optionsArg.Type() != js.TypeObject {
-			return options, errors.New("Third parameter should be undefined or Object type")
+	if optionsArg.Type() == js.TypeUndefined {
+		return options, nil
+	}
+
+	if optionsArg.Type() != js.TypeObject {
+		return options, errors.New("Third parameter should be undefined or Object type")
+	}
+
+	expiresValue := optionsArg.Get("expires")
+	pathValue := optionsArg.Get("path")
+	domainValue := optionsArg.Get("domain")
+	secureValue := optionsArg.Get("secure")
+
+	if expiresValue.Type() != js.TypeUndefined {
+		dateClass := js.Global().Get("Date")
+		if !expiresValue.InstanceOf(dateClass) {
+			return options, errors.New("expires option should be instance of Date")
 		}
 
-		expiresValue := optionsArg.Get("expires")
-		pathValue := optionsArg.Get("path")
-		domainValue := optionsArg.Get("domain")
-		secureValue := optionsArg.Get("secure")
+		timestamp := expiresValue.Call("getTime").Float()
+		options.expires = time.Unix(int64(timestamp), 0)
+	}
 
-		if expiresValue.Type() != js.TypeUndefined {
-			dateClass := js.Global().Get("Date")
-			if !expiresValue.InstanceOf(dateClass) {
-				return options, errors.New("expires option should be instance of Date")
-			}
-
-			timestamp := expiresValue.Call("getTime").Float()
-			options.expires = time.Unix(int64(timestamp), 0)
+	if pathValue.Type() != js.TypeUndefined {
+		if pathValue.Type() != js.TypeString {
+			return options, errors.New("path option should be String type")
 		}
+		options.path = pathValue.String()
+	}
 
-		if pathValue.Type() != js.TypeUndefined {
-			if pathValue.Type() != js.TypeString {
-				return options, errors.New("path option should be String type")
-			}
-			options.path = pathValue.String()
+	if domainValue.Type() != js.TypeUndefined {
+		if domainValue.Type() != js.TypeString {
+			return options, errors.New("domain option should be String type")
 		}
+		options.domain = domainValue.String()
+	}
 
-		if domainValue.Type() != js.TypeUndefined {
-			if domainValue.Type() != js.TypeString {
-				return options, errors.New("domain option should be String type")
-			}
-			options.domain = domainValue.String()
+	if secureValue.Type() != js.TypeUndefined {
+		if secureValue.Type() != js.TypeBoolean {
+			return options, errors.New("secure option should be Boolean type")
 		}
-
-		if secureValue.Type() != js.TypeUndefined {
-			if secureValue.Type() != js.TypeBoolean {
-				return options, errors.New("secure option should be Boolean type")
-			}
-			options.secure = secureValue.Bool()
-		}
+		options.secure = secureValue.Bool()
 	}
 
 	return options, nil
