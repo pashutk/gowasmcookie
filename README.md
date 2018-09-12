@@ -18,4 +18,7 @@ Then open localhost:8080/build in Chrome and use library in Console or in your j
 ## Usage
 ```
 window.libcookie.get('cookiename', value => console.log(value));
+window.libcookie.set('cookiename', 'cookievalue', {expires: new Date(), path: '/', domain: 'localhost', secure: true}, cookie => console.log(cookie));
+window.libcookie.remove('cookiename', ok => console.log(ok));
+
 ```
